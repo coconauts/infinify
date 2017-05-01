@@ -13,12 +13,13 @@ var spotifyApi = new SpotifyWebApi({
 if (config.token) spotifyApi.setAccessToken(config.token);
 if (config.refresh_token) {
     spotifyApi.setRefreshToken(config.refresh_token);
-    refreshToken();
+    refreshToken(function(){getOrCreatePlaylist(function(){});});
 }
 
 function getOrCreatePlaylist(callback) {
     spotifyApi.getUserPlaylists(undefined, {}, function (err, response) {
         if (err) {
+            console.error(err);
             callback(err, response);
             return;
         }
@@ -27,6 +28,7 @@ function getOrCreatePlaylist(callback) {
             var playlist = response.body.items[i];
             if (playlist.name == config.playlist_name) {
                 console.log("Found playlist with id ", playlist.id);
+                config.playlist = playlist.id;
                 callback(undefined, playlist);
                 return;
             }
@@ -44,19 +46,21 @@ function getOrCreatePlaylist(callback) {
                     return;
                 }
                 console.log("Created playlist with id ", response.body.id);
+                config.playlist = response.body.id;
                 callback(undefined, response.body);
                 return;
             });
         });
     });
 }
-function refreshToken() {
+function refreshToken(callback) {
     spotifyApi.refreshAccessToken()
         .then(function (data) {
             console.log('The access token has been refreshed!');
 
             // Save the access token so that it's used in future calls
             spotifyApi.setAccessToken(data.body['access_token']);
+            if (callback) callback();
         }, function (err) {
             console.log('Could not refresh access token', err);
         });
@@ -135,6 +139,31 @@ function clearPlaylist() {
 
 }
 
+function getRecommendations(artistIds, sourceTrack, callback){
+    spotifyApi.getRecommendations({ seed_artists: artistIds, limit: 3, market: "from_token" },
+        function (err, response) {
+
+            if (err) {
+                console.error("Unable to get recommendations ", err);
+                if (callback) callback(err);
+            } else {
+                var uris = [];
+                for (var i = 0 ; i < response.body.tracks.length ; i++){
+                    var recommended = response.body.tracks[i];
+                    
+                    console.log("Got recommendation: \n" +
+                        "- track name: ", recommended.name, " in album: ", recommended.album.name, " artist: " + recommended.artists[0].name + "\n" +
+                        "- from track name: ", sourceTrack.name, " in album: ", sourceTrack.album.name, " artist: ", sourceTrack.artists[0].name
+                    );
+
+                    uris.push(recommended.uri); //spotify:track:6O2urHAlufyVOPlpxpsWJu
+                }
+                callback(uris, response.body.tracks);
+                
+            }
+        });
+}
+
 function addRecommendation(callback) {
     console.log("Playing recommendation ");
 
@@ -149,34 +178,19 @@ function addRecommendation(callback) {
                 artistIds.push(artist.id);
             });
             //console.log("Getting recommendation from track ", track.name, " in album: ", track.album.name);
-            spotifyApi.getRecommendations({ seed_artists: artistIds, limit: 1 },
-                function (err, response) {
-
-                    if (err) {
-                        console.error("Unable to get recommendations ", err);
-                        if (callback) callback(err);
-                    } else {
-                        var recommended = response.body.tracks[0];
-                        if (recommended.is_playable !== false) {
-                            console.log("Got recommendation: \n" +
-                                "- track name: ", recommended.name, " in album: ", recommended.album.name, " artist: " + recommended.artists[0].name + "\n" +
-                                "- from track name: ", track.name, " in album: ", track.album.name, " artist: ", track.artists[0].name
-                            );
-
-                            var uri = track.uri; //spotify:track:6O2urHAlufyVOPlpxpsWJu
-                            spotifyApi.addTracksToPlaylist(config.user, config.playlist,
-                                [recommended.uri], {},
-                                function (err, response) {
-                                    if (err) console.error("Unable to addTracksToPlaylist ", err);
-                                    if (callback) callback(err, recommended);
-                                });
-                        } else {
-                            var err = "Track  " + recommended.name + " is not playable: " + recommended.is_playable;
-                            console.warn(err);
-                            if (callback) callback(err);
-                        }
-                    }
+            
+            getRecommendations(artistIds, track, function(uris, recommended){
+                // Select one random from the result
+                var idx = randomIntFromInterval(0, uris.length - 1);
+                var uriToAdd = uris[idx];
+                console.log("Adding ", uriToAdd, " to playlist");
+                spotifyApi.addTracksToPlaylist(config.user, config.playlist,
+                    [uriToAdd], {},
+                    function (err, response) {
+                        if (err) console.error("Unable to addTracksToPlaylist ", err);
+                        if (callback) callback(err, recommended[idx]);
                 });
+            });
         }
     });
 }
@@ -223,7 +237,6 @@ module.exports = {
 
                 getOrCreatePlaylist(function (err, playlist) {
                     if (err) console.error("Unable to get or create playlist ", err, playlist);
-                    else config.playlist = playlist.id;
                 });
 
                 res.writeHead(302, {
@@ -267,6 +280,27 @@ module.exports = {
 
             addRecommendation(function (err, response) {
                 res.json({ error: err, response: response });
+            });
+        });
+
+        app.get('/recommend', function (req, res) {
+            var artistId = "4tw2Lmn9tTPUv7Gy7mVPI4";
+            fakeTrack =  {
+                name: 'foo',
+                album: {name: 'foo'},
+                artists: [{name: 'foo'}]
+            }
+            response = [];
+            getRecommendations(artistId, fakeTrack, function(uris, recomended){
+                for (var i = 0; i < recomended.length; i++) {
+                    var song = recomended[i];
+                    response.push({
+                        artist: song.artists[0].name,
+                        album: song.album.name,
+                        title: song.name
+                    });
+                }
+                res.json(response);
             });
         });
        
