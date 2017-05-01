@@ -140,7 +140,8 @@ function clearPlaylist() {
 }
 
 function getRecommendations(artistIds, sourceTrack, callback){
-    spotifyApi.getRecommendations({ seed_artists: artistIds, limit: 3, market: "from_token" },
+    spotifyApi.getRecommendations(
+        { seed_artists: artistIds, limit: config.discoverability, market: "from_token" },
         function (err, response) {
 
             if (err) {
@@ -268,7 +269,7 @@ module.exports = {
         app.get('/start', function (req, res) {
             clearPlaylist();
 
-            for (var i = 0; i < config.recommendation_size; i++) {
+            for (var i = 0; i < config.playlist_size; i++) {
                 addRecommendation(function (err, response) { });
             }
 
