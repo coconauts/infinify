@@ -10,14 +10,46 @@ var spotifyApi = new SpotifyWebApi({
 });
 
 
-//var token = config.token;
-
 if (config.token) spotifyApi.setAccessToken(config.token);
 if (config.refresh_token) {
     spotifyApi.setRefreshToken(config.refresh_token);
     refreshToken();
 }
 
+function getOrCreatePlaylist(callback) {
+    spotifyApi.getUserPlaylists(undefined, {}, function (err, response) {
+        if (err) {
+            callback(err, response);
+            return;
+        }
+        // Try to find playlist
+        for (var i = 0; i < response.body.items.length; i++) {
+            var playlist = response.body.items[i];
+            if (playlist.name == config.playlist_name) {
+                console.log("Found playlist with id ", playlist.id);
+                callback(undefined, playlist);
+                return;
+            }
+        }
+        // If not found, create
+        spotifyApi.getMe(function (err, response) {
+            if (err) {
+                callback(err, response);
+                return;
+            }
+            var userId = response.body.id;
+            spotifyApi.createPlaylist(userId, config.playlist_name, { public: false }, function (err, response) {
+                if (err) {
+                    callback(err, response);
+                    return;
+                }
+                console.log("Created playlist with id ", response.body.id);
+                callback(undefined, response.body);
+                return;
+            });
+        });
+    });
+}
 function refreshToken() {
     spotifyApi.refreshAccessToken()
         .then(function (data) {
@@ -148,33 +180,7 @@ function addRecommendation(callback) {
         }
     });
 }
-/*
-function playRecommendations(seed) {
-    clearPlaylist();
 
-    spotifyApi.getRecommendations({ seed_artists: ['6mfK6Q2tzLMEchAr0e9Uzu'],
-        min_popularity: config.min_popularity },
-        function (err, response) {
-           // console.log("RESPONSE ", response);
-           if (err) console.error("Unable to get recommendations " , err);
-
-           else if (response) {
-                var track = "spotify:track:6uSIn5SVmUwile8TXoYMe6";
-                var uris = [];
-
-                response.body.tracks.forEach(function (track) {
-                    uris.push(track.uri);
-                });
-                console.log("Playing tracks ", uris);
-                var uri = track.uri; //spotify:track:6O2urHAlufyVOPlpxpsWJu
-                spotifyApi.addTracksToPlaylist(config.user, config.playlist,
-                    uris, {},
-                    function (err, response) {
-                        console.log("addTracksToPlaylist ", err, response );
-                    });
-            }
-        });
-}*/
 function randomIntFromInterval(min, max) {
     return Math.floor(Math.random() * (max - min + 1) + min);
 }
@@ -197,30 +203,10 @@ function getRandomTrack(callback) {
 
     });
 }
-/*
-function getRandomAlbum (callback) {
-    spotifyApi.getMySavedAlbums({limit:50 }, function(err, response){
-        //console.log("Total albums ", response.body);
-  
-        var random = randomIntFromInterval(0, response.body.total -1);
-        spotifyApi.getMySavedAlbums({limit:1 , offset: random}, function(err, response){
-            console.log("saved album ", response.body);
-            var album = response.body.items[0].album; 
-            callback(err, album);
-        });
-    });
-}*/
+
 module.exports = {
 
     routes: function (app) {
-
-        /* app.get('/seed', function (req, res) {
-        
-             getRandomTrack(function(err, track){
-                     res.json({ error: err, track: track });
-             });
-         });*/
-
         app.get('/callback', function (req, res) {
             //console.log("Callback response " , req);
 
@@ -235,6 +221,11 @@ module.exports = {
 
                 //res.json(data);
 
+                getOrCreatePlaylist(function (err, playlist) {
+                    if (err) console.error("Unable to get or create playlist ", err, playlist);
+                    else config.playlist = playlist.id;
+                });
+
                 res.writeHead(302, {
                     'Location': 'index.html'
                 });
@@ -244,50 +235,23 @@ module.exports = {
             });
         }),
 
-            app.get('/me', function (req, res) {
-                spotifyApi.getMe(function (err, response) {
-                    res.json({ error: err, response: response });
-                });
+        app.get('/me', function (req, res) {
+            spotifyApi.getMe(function (err, response) {
+                //TODO return response.body 
+                res.json({ error: err, response: response });
 
-                refreshToken();
+                config.user = response.body.id; 
             });
+
+            refreshToken();
+        });
+
         app.get('/login', function (req, res) {
             var state = "spotify-radio";
             var authorizeURL = spotifyApi.createAuthorizeURL(config.scopes, state);
             res.json({ "url": authorizeURL });
         });
-        app.get('/clear', function (req, res) {
-            clearPlaylist();
-            res.json({});
-        });
-        /*app.get('/test', function (req, res) {
-            playRecommendations('6mfK6Q2tzLMEchAr0e9Uzu');
-            res.json({});
-        });
-
-        app.get('/recommendations', function (req, res) {
-            getRandomTrack(function(err, track){
-                var artistIds = [];
-                track.artists.forEach(function(artist){
-                    artistIds.push(artist.id);
-                })
-                console.log("Getting recommendation from track ", track.name, " in album: ", track.album.name);
-                spotifyApi.getRecommendations({ seed_artists: artistIds, limit: 1},
-                function (err, response) {
-                    res.json({ error: err, response: response });
-                });
-                    
-            });
-        });*/
-        /*
-                app.get('/playlist', function (req, res) {
         
-                    spotifyApi.getPlaylist(config.user, config.playlist, function (err, response) {
-                        res.json({ error: err, response: response });
-        
-                    });
-                });
-        */
         app.get('/start', function (req, res) {
             clearPlaylist();
 
@@ -298,87 +262,13 @@ module.exports = {
             res.json({ url: "https://open.spotify.com/user/" + config.user + "/playlist/" + config.playlist });
         });
 
-        app.get('/init_playlist', function (req, res) {
-
-            spotifyApi.getUserPlaylists(undefined, {}, function (err, response) {
-                if (err){
-                    res.json({ error: err, response: response, method: 'getUserPlaylists' });
-                    return;
-                }
-                // Try to find playlist
-                for (var i = 0; i < response.body.items.length; i++) {
-                    var playlist = response.body.items[i];
-                    if (playlist.name == config.playlist_name){
-                        console.log("Found playlist with id ", playlist.id);
-                        res.json(playlist);
-                        return;
-                    }
-                }
-                // If not found, create
-                spotifyApi.getMe(function (err, response) {
-                    if (err){
-                        res.json({ error: err, response: response ,method: 'getMe' });
-                        return;
-                    }
-                    var userId = response.body.id;
-                    spotifyApi.createPlaylist(userId, config.playlist_name, {public: false}, function(err, response){
-                        if (err){
-                            res.json({ error: err, response: response, method: 'createPlaylist' });
-                            return;
-                        }
-                        console.log("Created playlist with id ", response.body.id);
-                        res.json(response.body);
-                        return;
-                    });
-                });
-            });
-        });
-
-        app.get('/position', function (req, res) {
-            getPositionLastPlayed(function (err, response) {
-                res.json({ error: err, response: response });
-            });
-        });
-
+        
         app.get('/update', function (req, res) {
-
-            // Calculate the position of the current song, and remove it from the list if > 2
-            // Too complicated, too many calls for so little advantage
-            /*getPositionLastPlayed(function (err, response) {
-                if (err) {
-                    res.json({error: err});
-                    if (err.statusCode == 401) refreshToken();
-
-                } else {
-                    var playlistSize = response.playlistSize;
-                    if (response.position >= 2) {
-                        removeFirstItemPlaylist();
-                        playlistSize --;
-                    }
-                    if (playlistSize < recommendation_size) {
-                        addRecommendation(function (err, response) {
-                            res.json({ error: err, response: response });
-                        });
-                    } else {
-                        res.json({ response: "No song added, playlist has max size" });
-                    }
-                }
-            });*/
 
             addRecommendation(function (err, response) {
                 res.json({ error: err, response: response });
             });
-
         });
-        /*
-                app.get('/play', function (req, res) {
-                    var track = "spotify:track:6uSIn5SVmUwile8TXoYMe6";
-                    spotifyApi.addTracksToPlaylist(config.user, config.playlist,
-                        [track], {},
-                        function (err, response) {
-                            res.json({ error: err, response: response });
-                        });
-                });*/
-
+       
     }
 }
