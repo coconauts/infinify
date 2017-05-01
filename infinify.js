@@ -110,7 +110,7 @@ function addRecommendation(callback) {
         if (err) {
             console.error("Unable to get getRandomTrack ", err);
             if (callback) callback(err);
-        } else  {
+        } else {
             //console.log("track " , track);
             var artistIds = [];
             track.artists.forEach(function (artist) {
@@ -145,7 +145,7 @@ function addRecommendation(callback) {
                         }
                     }
                 });
-        } 
+        }
     });
 }
 /*
@@ -182,7 +182,7 @@ function randomIntFromInterval(min, max) {
 function getRandomTrack(callback) {
     spotifyApi.getMySavedTracks({ limit: 1 }, function (err, response) {
         if (err) {
-            console.error("Unable to get saved tracks " , err);
+            console.error("Unable to get saved tracks ", err);
             callback(err);
             if (err.statusCode == 401) refreshToken();
 
@@ -244,13 +244,13 @@ module.exports = {
             });
         }),
 
-        app.get('/me', function (req, res) {
-            spotifyApi.getMe(function (err, response) {
-                res.json({ error: err, response: response });
-            });
+            app.get('/me', function (req, res) {
+                spotifyApi.getMe(function (err, response) {
+                    res.json({ error: err, response: response });
+                });
 
-            refreshToken();
-        });
+                refreshToken();
+            });
         app.get('/login', function (req, res) {
             var state = "spotify-radio";
             var authorizeURL = spotifyApi.createAuthorizeURL(config.scopes, state);
@@ -279,23 +279,59 @@ module.exports = {
                     
             });
         });*/
-/*
-        app.get('/playlist', function (req, res) {
-
-            spotifyApi.getPlaylist(config.user, config.playlist, function (err, response) {
-                res.json({ error: err, response: response });
-
-            });
-        });
-*/
+        /*
+                app.get('/playlist', function (req, res) {
+        
+                    spotifyApi.getPlaylist(config.user, config.playlist, function (err, response) {
+                        res.json({ error: err, response: response });
+        
+                    });
+                });
+        */
         app.get('/start', function (req, res) {
             clearPlaylist();
 
             for (var i = 0; i < config.recommendation_size; i++) {
-                addRecommendation(function (err, response) {});
+                addRecommendation(function (err, response) { });
             }
 
             res.json({ url: "https://open.spotify.com/user/" + config.user + "/playlist/" + config.playlist });
+        });
+
+        app.get('/init_playlist', function (req, res) {
+
+            spotifyApi.getUserPlaylists(undefined, {}, function (err, response) {
+                if (err){
+                    res.json({ error: err, response: response, method: 'getUserPlaylists' });
+                    return;
+                }
+                // Try to find playlist
+                for (var i = 0; i < response.body.items.length; i++) {
+                    var playlist = response.body.items[i];
+                    if (playlist.name == config.playlist_name){
+                        console.log("Found playlist with id ", playlist.id);
+                        res.json(playlist);
+                        return;
+                    }
+                }
+                // If not found, create
+                spotifyApi.getMe(function (err, response) {
+                    if (err){
+                        res.json({ error: err, response: response ,method: 'getMe' });
+                        return;
+                    }
+                    var userId = response.body.id;
+                    spotifyApi.createPlaylist(userId, config.playlist_name, {public: false}, function(err, response){
+                        if (err){
+                            res.json({ error: err, response: response, method: 'createPlaylist' });
+                            return;
+                        }
+                        console.log("Created playlist with id ", response.body.id);
+                        res.json(response.body);
+                        return;
+                    });
+                });
+            });
         });
 
         app.get('/position', function (req, res) {

@@ -18,7 +18,7 @@ app.post('/', function(req, res){
     res.json(json);
 });*/
 
-require('./spotify.js').routes(app);
+require('./infinify.js').routes(app);
 
 app.listen(8988);
 
