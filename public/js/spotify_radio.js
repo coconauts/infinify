@@ -10,9 +10,12 @@ $(document).ready(function () {
         url: '/me',
         success: function (json) {
             if (json.error) {
+                $("#logged").hide();
                 $("#login").show();
+                
             } else {
                 $("#logged").show();
+                $("#login").hide();
                 $("#user-name").html(json.response.body.id);
             }
         }
@@ -21,6 +24,8 @@ $(document).ready(function () {
     $('#stop-radio').click(stopInterval);
 
     $('#login').click(login);
+
+    $('#add').click(addSong);
 
     $('#start-radio').click(function () {
         console.log("starting radio");
