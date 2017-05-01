@@ -1,0 +1,60 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <title> Infinify by Coconauts</title>
+
+    <script languaje='javascript' src="js/jquery.min.js"></script>
+    <script languaje='javascript' src="js/mustache.min.js"></script>
+    <script languaje='javascript' src="js/materialize.min.js"></script>
+
+    <script type='text/javascript' src='js/spotify_radio.js'></script>
+
+    <link rel="stylesheet" href="css/ionicons/ionicons.min.css" />
+    <link rel='stylesheet' href='css/ux/materialize.min.css' />
+
+    <link rel="stylesheet" href="css/style.css" />
+
+</head>
+
+<body>
+    <nav>
+        <div class="nav-wrapper light-green">
+            <a href="#" class="brand-logo center">Infinify</a>
+            <ul id="nav-mobile" class="right hide-on-med-and-down">
+                <a id='login' class='hidden btn '>Login </a>
+
+                <a href='#' id='logged' class='hidden'>Welcome <b id='user-name'></b></a>
+
+            </ul>
+        </div>
+    </nav>
+
+    <div class="container">
+        <div class="row">
+            <div class="col s12 center-align">
+
+                <a class="" id='start-radio'>
+                    <img src='css/images/play.png' </img>
+                </a>
+                <a class="hidden" id='stop-radio' >
+                    <img src='css/images/pause.png' </img>
+                </a>
+            </div>
+            <div class="col s12 center-align">
+
+                <a class="hidden" href='http://spotify.com' id='spotify-url' target='_blank'>
+                    <img style='width:32px' src='css/images/external.png' </img> Open Playlist
+                </a>
+            </div>
+
+            <div class="col s12 center-align" id='log'>
+
+                
+            </div>
+
+        </div>
+    </div>
+</body>
+
+</html>

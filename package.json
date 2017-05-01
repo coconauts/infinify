@@ -1,0 +1,14 @@
+{
+  "name": "inifify",
+  "dependencies": {
+    "body-parser": "1.0.2",
+    "express": "4.1.1",
+    "spotify-web-api-node": "^2.3.6"
+  },
+  "engine": {
+    "node": ">=0.10.25"
+  },
+  "devDependencies": {
+    "should": "^4.4.2"
+  }
+}
