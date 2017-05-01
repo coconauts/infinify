@@ -151,11 +151,11 @@ function getRecommendations(artistIds, sourceTrack, callback){
                 var uris = [];
                 for (var i = 0 ; i < response.body.tracks.length ; i++){
                     var recommended = response.body.tracks[i];
-                    
+                    /*
                     console.log("Got recommendation: \n" +
                         "- track name: ", recommended.name, " in album: ", recommended.album.name, " artist: " + recommended.artists[0].name + "\n" +
                         "- from track name: ", sourceTrack.name, " in album: ", sourceTrack.album.name, " artist: ", sourceTrack.artists[0].name
-                    );
+                    );*/
 
                     uris.push(recommended.uri); //spotify:track:6O2urHAlufyVOPlpxpsWJu
                 }
@@ -249,6 +249,10 @@ module.exports = {
             });
         }),
 
+        /**
+         * This endpoint is requested when app starts, to know if you are identified, 
+         * Perfect timing for refreshing the token
+         */
         app.get('/me', function (req, res) {
             spotifyApi.getMe(function (err, response) {
                 //TODO return response.body 
@@ -283,6 +287,15 @@ module.exports = {
                 res.json({ error: err, response: response });
             });
         });
+        app.get('/discoverability', function (req, res) {
+
+            config.discoverability = parseInt(req.query.value);
+            console.log("Updated discoverability " + config.discoverability);
+            res.json({});
+        });
+
+        /*
+        // For debugging the recommendation arguments
 
         app.get('/recommend', function (req, res) {
             var artistId = "4tw2Lmn9tTPUv7Gy7mVPI4";
@@ -303,7 +316,7 @@ module.exports = {
                 }
                 res.json(response);
             });
-        });
+        });*/
        
     }
 }

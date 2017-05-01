@@ -21,7 +21,7 @@
     <nav>
         <div class="nav-wrapper light-green">
             <a href="#" class="brand-logo center">Infinify</a>
-            <ul id="nav-mobile" class="right hide-on-med-and-down">
+            <ul id="nav-mobile" class="right">
                 <a id='login' class='hidden btn '>Login </a>
 
                 <a href='#' id='logged' class='hidden'>Welcome <b id='user-name'></b></a>
@@ -32,6 +32,7 @@
 
     <div class="container">
         <div class="row">
+
             <div class="col s12 center-align logged">
 
                 <a class="" id='start-radio'>
@@ -45,6 +46,16 @@
                     <img  style='width:64px' src='css/images/add.png' </img>
                 </a>
             </div>
+            <div class="col offset-s3 s2 center-align">
+                  <p style='color:gray'> Discoverability </p> 
+            </div>           
+
+            <div class="col s4 center-align">
+                <p class="range-field">
+                    <input id="discoverability" type="range" value="5" min="1" max="10" step="1"/>
+                </p>
+            </div>   
+            
             <div class="col s12 center-align">
 
                 <a class="hidden" href='http://spotify.com' id='spotify-url' target='_blank'>

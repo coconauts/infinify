@@ -21,6 +21,15 @@ $(document).ready(function () {
         }
     })
 
+    $("#discoverability").on("change",function(){
+        console.log("discover " , this.value); 
+        $.ajax({
+            url: "discoverability",
+            data:  { 'value': this.value}
+            //type GET
+        });
+
+    });
     $('#stop-radio').click(stopInterval);
 
     $('#login').click(login);
