@@ -3,19 +3,64 @@ var updateInterval;
 var webTitle = "Infinify";
 var songInterval = 2 * 60 * 1000;  // 2 mins
 
+var auth; 
+
+function getParameterByName(name, url) {
+    if (!url) url = window.location.href;
+    name = name.replace(/[\[\]]/g, "\\$&");
+    var regex = new RegExp("[?&]" + name + "(=([^&#]*)|&|#|$)"),
+        results = regex.exec(url);
+    if (!results) return null;
+    if (!results[2]) return '';
+    return decodeURIComponent(results[2].replace(/\+/g, " "));
+}
+
 $(document).ready(function () {
 
 
+    // get from getparams (after login) 
+    if (!auth) {
+        auth = getParameterByName("auth", location.search);
+        // If in getparams, save in localstorage
+        if (auth) {
+            console.log("auth ", auth) ; 
+            localStorage.setItem("auth", auth);  
+
+        // Get auth from local storage
+        } else {
+             auth = localStorage.getItem("auth");
+             console.log("local storage auth ", auth) ;
+
+             // If not in local storage either, you nee dto login
+
+        }
+    }
+
+    $('#login').click(login);
+    $('#logout').click(logout);
+
+    if (!auth) {
+        console.warn("No auth found, you need to login"); 
+        $(".logged").hide();
+        $(".not-logged").show();
+        return;  
+    }
+
     $.ajax({
         url: '/me',
+        headers: { "auth": auth },
         success: function (json) {
             if (json.error) {
-                $("#logged").hide();
-                $("#login").show();
-                
+                $(".logged").hide();
+                $(".not-logged").show();
+                console.log("Auth token expired, try logging again");
+                localStorage.clear();
+
             } else {
-                $("#logged").show();
-                $("#login").hide();
+
+                $(".logged").show();
+                $(".not-logged").hide();
+
                 $("#user-name").html(json.response.body.id);
             }
         }
@@ -25,14 +70,13 @@ $(document).ready(function () {
         console.log("discover " , this.value); 
         $.ajax({
             url: "discoverability",
+            headers: { "auth": auth },
             data:  { 'value': this.value}
             //type GET
         });
 
     });
     $('#stop-radio').click(stopInterval);
-
-    $('#login').click(login);
 
     $('#add').click(addSong);
 
@@ -41,6 +85,7 @@ $(document).ready(function () {
         document.title = " ▶ " + webTitle;
         $.ajax({
             url: '/start',
+            headers: { "auth": auth },
             success: function (json) {
                 console.log("Successful start response ", json);
 
@@ -66,10 +111,17 @@ $(document).ready(function () {
 function login() {
     $.ajax({
         url: '/login',
+        async: false, 
         success: function (json) {
-            window.open(json.url);
+            console.log("Loggin into spotify: "+ json.url);
+            var result = window.open(json.url, "_self");
+
         }
     });
+}
+function logout() {
+    localStorage.clear();
+    window.open("/", "_self");
 }
 
 function stopInterval() {
@@ -83,6 +135,7 @@ function stopInterval() {
 function addSong() {
     $.ajax({
         url: '/update',
+        headers: { "auth": auth },
         success: function (json) {
             if (json.error) {
                 console.error("Unable to update playlist ", json.error);

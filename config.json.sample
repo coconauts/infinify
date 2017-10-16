@@ -1,0 +1,23 @@
+{
+   "client_id": "your-client-id",
+   "client_secret": "your-client-secret",
+   "token": "your-secret-token",
+   "refresh_token": "your-refresh-token",
+   "scopes": [
+       "user-read-recently-played",
+       "user-read-playback-state",
+       "playlist-read-private",
+       "playlist-read-collaborative",
+       "playlist-modify-private",
+       "playlist-modify-public",
+       "user-library-read",
+       "user-library-modify",
+       "user-read-private"
+   ],
+   "redirect_uri": "http://localhost:8988/callback",
+   "user": "your-user-name",
+   "discoverability": 5,
+   "playlist_size": 5,
+   "min_popularity": 50,
+   "playlist_name": "infinify"
+}
